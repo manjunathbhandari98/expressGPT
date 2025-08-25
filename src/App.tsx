@@ -1,7 +1,7 @@
 
 import './App.css'
-import Chat from './components/chat/chat'
 import UniverseBackground from './components/UniverseBackground'
+import Chat from './pages/Chats'
 
 function App() {
 
