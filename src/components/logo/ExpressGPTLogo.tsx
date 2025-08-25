@@ -10,12 +10,12 @@ interface ExpressGPTLogoProps {
 const ExpressGPTLogo: React.FC<ExpressGPTLogoProps> = ({
   size = 56,
   textClassName = "text-3xl font-extrabold tracking-wide",
-  className = "flex items-center",
+  className = "flex items-center ",
   withText = true,
 }) => {
   return (
     <div className={className}>
-      <img src="/logo.png" className="w-40" alt="" />
+      <img src="/logo.png" className={`w-${size} h-${size}`} alt="logo" />
 
       {/* Text */}
       {withText && (
