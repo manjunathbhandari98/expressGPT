@@ -5,14 +5,26 @@ import "../styles/animation.css";
 const UniverseBackground: React.FC = () => {
   const [shootingStars, setShootingStars] = useState<any[]>([]);
   const [nebulaClouds, setNebulaClouds] = useState<any[]>([]);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+  const [screenHeight, setScreenHeight] = useState(window.innerHeight);
 
-  // Shooting stars
+  // ✅ Track screen resize
+  useEffect(() => {
+    const handleResize = () => {
+      setScreenWidth(window.innerWidth);
+      setScreenHeight(window.innerHeight);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // 🌠 Shooting stars
   useEffect(() => {
     const interval = setInterval(() => {
       const newStar = {
         id: Math.random(),
-        startX: Math.random() * window.innerWidth,
-        startY: Math.random() * 200,
+        startX: Math.random() * screenWidth,
+        startY: Math.random() * (screenHeight * 0.2), // only top 20%
         duration: Math.random() * 3 + 2,
       };
       setShootingStars((prev) => [...prev, newStar]);
@@ -25,25 +37,28 @@ const UniverseBackground: React.FC = () => {
     }, Math.random() * 4000 + 2000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [screenWidth, screenHeight]);
 
-  // Nebula
+  // 🌌 Nebula clouds (sizes scale with screen size)
   useEffect(() => {
-    const clouds = Array.from({ length: 8 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 300 + 150,
-      opacity: Math.random() * 0.3 + 0.1,
-      hue: Math.random() * 60 + 240,
-      duration: Math.random() * 20 + 30,
-    }));
+    const clouds = Array.from({ length: 6 }, (_, i) => {
+      const baseSize = screenWidth < 640 ? 120 : screenWidth < 1024 ? 200 : 300;
+      return {
+        id: i,
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        size: Math.random() * baseSize + baseSize,
+        opacity: Math.random() * 0.3 + 0.1,
+        hue: Math.random() * 60 + 240,
+        duration: Math.random() * 20 + 30,
+      };
+    });
     setNebulaClouds(clouds);
-  }, []);
+  }, [screenWidth]);
 
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden bg-black">
-      {/*  Gradient background */}
+      {/* Gradient background */}
       <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-zinc-900 to-black"></div>
 
       {/* Nebula overlays */}
@@ -71,25 +86,23 @@ const UniverseBackground: React.FC = () => {
       ))}
 
       {/* ⭐ Stars */}
-     {/* ⭐ Stars */}
-<div className="absolute inset-0">
-  {Array.from({ length: 200 }, (_, i) => (
-    <div
-      key={i}
-      className="absolute bg-white rounded-full"
-      style={{
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * 100}%`,
-        width: `${Math.random() * 2 + 0.5}px`,
-        height: `${Math.random() * 2 + 0.5}px`,
-        opacity: 0.8,
-        animation: `twinkle 2000s ease-in-out infinite`,
-        animationDelay: `3000s`,
-      }}
-    />
-  ))}
-</div>
-
+      <div className="absolute inset-0">
+        {Array.from({ length: screenWidth < 640 ? 80 : 200 }, (_, i) => (
+          <div
+            key={i}
+            className="absolute bg-white rounded-full"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              width: `${Math.random() * 2 + 0.5}px`,
+              height: `${Math.random() * 2 + 0.5}px`,
+              opacity: 0.8,
+              animation: `twinkle ${2 + Math.random() * 2}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 3}s`,
+            }}
+          />
+        ))}
+      </div>
 
       {/* 🌠 Shooting Stars */}
       {shootingStars.map((star) => (
@@ -104,9 +117,7 @@ const UniverseBackground: React.FC = () => {
           }}
         />
       ))}
-      
     </div>
-    
   );
 };
 
