@@ -1,45 +1,46 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// ChatView.jsx - Fixed mobile responsiveness
-import { ChevronDown, Menu, Mic, Paperclip, Send } from "lucide-react";
+import { Menu, Mic, Paperclip, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { randomResponses } from "../data/randomResponse";
+import { generateResponse } from "../services/geminiServices";
+import type { Chat } from "../types/chat";
 import type { Message } from "../types/message";
 import RequestBubble from "./messages/RequestBubble";
 import ResponseBubble from "./messages/ResponseBubble";
+
 type ChatViewProps = {
-  onToggleSidebar: () => void;  // function with no args, no return
+  onToggleSidebar: () => void;
+  currentChatId: string | null;
+  chats: Chat[];
+  onUpdateChats: (chats: Chat[]) => void;
+  onCreateNewChat: () => void;
 };
 
-const ChatView: React.FC<ChatViewProps> = ({ onToggleSidebar }) => {
+const ChatView: React.FC<ChatViewProps> = ({ 
+  onToggleSidebar, 
+  currentChatId, 
+  chats, 
+  onUpdateChats,
+  onCreateNewChat 
+}) => {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      // Reset height to shrink if text is deleted
-      textareaRef.current.style.height = "auto";
-
-      // Calculate new height but cap it at max height
-      const lineHeight = 24; // must match CSS line-height
-      const maxRows = 10;
-      const maxHeight = lineHeight * maxRows;
-
-      textareaRef.current.style.height = Math.min(
-        textareaRef.current.scrollHeight,
-        maxHeight
-      ) + "px";
-    }
-  }, [input]);
-
-  // Scroll down whenever messages change
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [chats, currentChatId]);
 
-  const sendMessage = () => {
+  const currentChat = chats.find((c) => c.id === currentChatId);
+
+  const sendMessage = async () => {
     if (!input.trim()) return;
+
+    // If no current chat, create a new one
+    if (!currentChatId) {
+      onCreateNewChat();
+      return;
+    }
 
     const newMessage: Message = {
       id: Date.now(),
@@ -47,21 +48,65 @@ const ChatView: React.FC<ChatViewProps> = ({ onToggleSidebar }) => {
       text: input.trim(),
     };
 
-    setMessages((prev) => [...prev, newMessage]);
+    // Add user message
+    const updatedChats = chats.map((c) =>
+      c.id === currentChatId
+        ? { ...c, messages: [...c.messages, newMessage] }
+        : c
+    );
+    onUpdateChats(updatedChats);
     setInput("");
 
-    // Add random response after delay
-    setTimeout(() => {
-      const response: Message = {
-        id: Date.now() + 1,
-        type: "response",
-        text: randomResponses[Math.floor(Math.random() * randomResponses.length)],
-      };
-      setMessages((prev) => [...prev, response]);
-    }, 800);
+    // Add loading message
+    const loadingId = Date.now() + 1;
+    const chatsWithLoading = updatedChats.map((c) =>
+      c.id === currentChatId
+        ? { 
+            ...c, 
+            messages: [...c.messages, { 
+              id: loadingId, 
+              type: "response" as const, 
+              text: "…" 
+            }] 
+          }
+        : c
+    );
+    onUpdateChats(chatsWithLoading);
+
+    try {
+      const reply = await generateResponse(newMessage.text);
+      const finalChats = chatsWithLoading.map((c) =>
+        c.id === currentChatId
+          ? {
+              ...c,
+              messages: c.messages.map((m: Message) =>
+                m.id === loadingId ? { ...m, text: reply ?? "" } : m
+              ),
+              title:
+                c.title === "New Chat"
+                  ? newMessage.text.slice(0, 20)
+                  : c.title, // auto-generate chat title
+            }
+          : c
+      );
+      onUpdateChats(finalChats);
+    } catch (err) {
+      const errorChats = chatsWithLoading.map((c) =>
+        c.id === currentChatId
+          ? {
+              ...c,
+              messages: c.messages.map((m: any) =>
+                m.id === loadingId ? { ...m, text: "Error fetching AI response." } : m
+              ),
+            }
+          : c
+      );
+      onUpdateChats(errorChats);
+      console.error(err);
+    }
   };
 
-  const handleKeyDown = (e:any) => {
+  const handleKeyDown = (e: any) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -71,7 +116,7 @@ const ChatView: React.FC<ChatViewProps> = ({ onToggleSidebar }) => {
   return (
     <div className="flex flex-col h-full">
       {/* Top Header - Always visible */}
-      <div className="flex justify-between items-center p-3 sm:p-4  backdrop-blur-sm  border-white/10">
+      <div className="flex justify-between items-center p-3 sm:p-4 backdrop-blur-sm border-white/10">
         <div className="flex items-center gap-2">
           {/* Mobile menu button - Always visible on mobile */}
           <button 
@@ -84,8 +129,8 @@ const ChatView: React.FC<ChatViewProps> = ({ onToggleSidebar }) => {
           
           {/* Choose Model dropdown */}
           <div className="flex gap-1 items-center font-medium hover:bg-white/20 px-2 sm:px-3 py-2 rounded-lg cursor-pointer transition-colors">
-            <h3 className="text-sm sm:text-base text-white">Choose Model</h3>
-            <ChevronDown className="w-4 h-4 text-white" />
+            {/* <h3 className="text-sm sm:text-base text-white">Choose Model</h3>
+            <ChevronDown className="w-4 h-4 text-white" /> */}
           </div>
         </div>
         
@@ -99,8 +144,7 @@ const ChatView: React.FC<ChatViewProps> = ({ onToggleSidebar }) => {
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto scrollbar-none">
           <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4">
-            {/* Welcome message when no chats */}
-            {messages.length === 0 && (
+            {!currentChat || currentChat.messages.length === 0 ? (
               <div className="flex items-center justify-center h-full min-h-[50vh]">
                 <div className="text-center px-4">
                   <h2 className="font-bold text-xl sm:text-2xl lg:text-3xl text-white mb-2">
@@ -111,16 +155,13 @@ const ChatView: React.FC<ChatViewProps> = ({ onToggleSidebar }) => {
                   </p>
                 </div>
               </div>
-            )}
-
-            {/* Messages */}
-            {messages.length > 0 && (
+            ) : (
               <div className="space-y-4 pb-4">
-                {messages.map((msg) =>
+                {currentChat.messages.map((msg: Message) =>
                   msg.type === "request" ? (
-                    <RequestBubble key={msg.id} message={msg.text} />
+                   <RequestBubble key={msg.id} message={msg.text} />
                   ) : (
-                    <ResponseBubble key={msg.id} message={msg.text} />
+                     <ResponseBubble key={msg.id} message={msg.text} />
                   )
                 )}
               </div>
@@ -131,30 +172,29 @@ const ChatView: React.FC<ChatViewProps> = ({ onToggleSidebar }) => {
       </div>
 
       {/* Input Area - Sticky at bottom */}
-      <div className=" ">
+      <div className="">
         <div className="max-w-4xl mx-auto p-3 sm:p-4">
           <div className="bg-black/10 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/20">
             {/* Text input */}
             <div className="mb-3">
-        <textarea
-      ref={textareaRef}
-      value={input}
-      onChange={(e) => setInput(e.target.value)}
-      onKeyDown={handleKeyDown}
-      className="
-        w-full text-base sm:text-lg bg-transparent text-white 
-        placeholder:text-white/50 outline-none border-none resize-none 
-        overflow-y-auto custom-scrollbar transition-all duration-150
-      "
-      placeholder="Ask anything..."
-      rows={2}
-      style={{
-        fontSize: "16px", // Prevents zoom on iOS
-        lineHeight: "24px", // Consistent with JS calculation
-        maxHeight: "240px", // 10 rows × 24px
-      }}
-    />
-
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="
+                  w-full text-base sm:text-xl bg-transparent text-white 
+                  placeholder:text-white/50 outline-none border-none resize-none 
+                  overflow-y-auto custom-scrollbar transition-all duration-150
+                "
+                placeholder="Ask anything..."
+                rows={2}
+                style={{
+                  fontSize: "20px", // Prevents zoom on iOS
+                  lineHeight: "24px", // Consistent with JS calculation
+                  maxHeight: "240px", // 10 rows × 24px
+                }}
+              />
             </div>
 
             {/* Action buttons */}
