@@ -68,6 +68,74 @@ const Chat = () => {
     setChats(updatedChats);
   };
 
+  const handleDeleteChat = (chatIdToDelete: string) => {
+  // Don't delete if it's the only chat
+  if (chats.length <= 1) {
+    // Optionally show a message that you need at least one chat
+    return;
+  }
+
+  // Remove the chat from the list
+  const updatedChats = chats.filter(chat => chat.id !== chatIdToDelete);
+  setChats(updatedChats);
+
+  // If the deleted chat was the active one, select another chat
+  if (currentChatId === chatIdToDelete) {
+    // Select the first available chat
+    const newActiveChatId = updatedChats.length > 0 ? updatedChats[0].id : null;
+    setCurrentChatId(newActiveChatId);
+  }
+};
+
+const handleRenameChat = (chatId: string, newTitle: string) => {
+  const updatedChats = chats.map(chat =>
+    chat.id === chatId
+      ? { ...chat, title: newTitle }
+      : chat
+  );
+  setChats(updatedChats);
+};
+
+const handleShareChat = async (chatId: string) => {
+  const chatToShare = chats.find(chat => chat.id === chatId);
+  if (!chatToShare) return;
+
+  // Create a shareable text version of the chat
+  const chatText = chatToShare.messages
+    .map(msg => `${msg.type === 'request' ? 'User' : 'AI'}: ${msg.text}`)
+    .join('\n\n');
+
+  const shareData = {
+    title: `Chat: ${chatToShare.title}`,
+    text: chatText
+  };
+
+  try {
+    // Use Web Share API if available (mobile devices)
+    if (navigator.share && navigator.canShare?.(shareData)) {
+      await navigator.share(shareData);
+    } else {
+      // Fallback: copy to clipboard
+      await navigator.clipboard.writeText(`${shareData.title}\n\n${shareData.text}`);
+      
+      // Optionally show a toast/notification
+      // showNotification("Chat copied to clipboard!");
+      alert("Chat copied to clipboard!");
+    }
+  } catch (error) {
+    console.error('Error sharing chat:', error);
+    
+    // Fallback: try copying to clipboard
+    try {
+      await navigator.clipboard.writeText(`${shareData.title}\n\n${shareData.text}`);
+      alert("Chat copied to clipboard!");
+    } catch (clipboardError) {
+      console.error('Error copying to clipboard:', clipboardError);
+      alert("Unable to share or copy chat.");
+    }
+  }
+};
+
   return (
     <div className="h-screen flex ">
       {/* Sidebar - Desktop always visible, Mobile overlay */}
@@ -77,13 +145,17 @@ const Chat = () => {
         fixed md:relative z-50 md:z-0 
         h-full transition-transform duration-300 ease-in-out
       `}>
-        <Sidebar
-          onClose={closeSidebar}
-          onSelectChat={selectChat}
-          onCreateNewChat={createNewChat}
-          chats={chats}
-          activeChatId={currentChatId}
-        />
+        
+<Sidebar
+  onClose={() => setSidebarOpen(false)}
+  onSelectChat={selectChat}
+  onCreateNewChat={createNewChat}
+  onDeleteChat={handleDeleteChat}
+  onRenameChat={handleRenameChat}
+  onShareChat={handleShareChat}
+  chats={chats}
+  activeChatId={currentChatId}
+/>
       </div>
 
       {/* Mobile backdrop */}

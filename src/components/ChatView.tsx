@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Menu, Mic, Paperclip, Send } from "lucide-react";
+import { Menu, Mic, Paperclip, Send, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { generateResponse } from "../services/geminiServices";
+import { generateResponse, generateTitle } from "../services/geminiServices";
 import type { Chat } from "../types/chat";
 import type { Message } from "../types/message";
 import RequestBubble from "./messages/RequestBubble";
@@ -23,15 +23,47 @@ const ChatView: React.FC<ChatViewProps> = ({
   onCreateNewChat 
 }) => {
   const [input, setInput] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingMessageId, setStreamingMessageId] = useState<number | null>(null);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Auto-scroll
   useEffect(() => {
+    if (textareaRef.current) {
+      // Reset height to shrink if text is deleted
+      textareaRef.current.style.height = "auto";
+
+      // Calculate new height but cap it at max height
+      const lineHeight = 24; // must match CSS line-height
+      const maxRows = 10;
+      const maxHeight = lineHeight * maxRows;
+
+      textareaRef.current.style.height = Math.min(
+        textareaRef.current.scrollHeight,
+        maxHeight
+      ) + "px";
+    }
+  }, [input]);
+
+  // Auto-scroll only when new prompt is added (not during streaming)
+useEffect(() => {
+  if (!isStreaming) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chats, currentChatId]);
+  }
+}, [chats, currentChatId, isStreaming]);
+
 
   const currentChat = chats.find((c) => c.id === currentChatId);
+
+  const stopStreaming = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+    }
+    setIsStreaming(false);
+    setStreamingMessageId(null);
+  };
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -57,40 +89,227 @@ const ChatView: React.FC<ChatViewProps> = ({
     onUpdateChats(updatedChats);
     setInput("");
 
-    // Add loading message
+    // Add streaming message placeholder
     const loadingId = Date.now() + 1;
     const chatsWithLoading = updatedChats.map((c) =>
       c.id === currentChatId
         ? { 
             ...c, 
-            messages: [...c.messages, { 
-              id: loadingId, 
-              type: "response" as const, 
-              text: "…" 
-            }] 
+            messages: [
+              ...c.messages, 
+              { id: loadingId, type: "response" as const, text: "" }
+            ] 
           }
         : c
     );
     onUpdateChats(chatsWithLoading);
 
+    // Set streaming state
+    setIsStreaming(true);
+    setStreamingMessageId(loadingId);
+    
+    // Create abort controller for stopping
+    const controller = new AbortController();
+    setAbortController(controller);
+
     try {
+      // Get the full response first
       const reply = await generateResponse(newMessage.text);
-      const finalChats = chatsWithLoading.map((c) =>
-        c.id === currentChatId
-          ? {
-              ...c,
-              messages: c.messages.map((m: Message) =>
-                m.id === loadingId ? { ...m, text: reply ?? "" } : m
-              ),
-              title:
-                c.title === "New Chat"
-                  ? newMessage.text.slice(0, 20)
-                  : c.title, // auto-generate chat title
-            }
-          : c
+      
+      if (controller.signal.aborted) return;
+
+      // Simulate typing effect by updating the message character by character
+      const typeMessage = async (fullText: string) => {
+        let currentText = "";
+        
+        for (let i = 0; i < fullText.length; i++) {
+          if (controller.signal.aborted) break;
+          
+          currentText += fullText[i];
+          
+          // Update the message with current text
+          const typingChats = chatsWithLoading.map((c) =>
+            c.id === currentChatId
+              ? {
+                  ...c,
+                  messages: c.messages.map((m: Message) =>
+                    m.id === loadingId ? { ...m, text: currentText } : m
+                  ),
+                }
+              : c
+          );
+          onUpdateChats(typingChats);
+          
+          // Wait before adding next character (typing speed)
+          await new Promise(resolve => setTimeout(resolve, 1));
+        }
+      };
+
+      await typeMessage(reply || "");
+
+      if (controller.signal.aborted) return;
+
+      // Generate title if needed
+      let finalTitle = "";
+      const finalChats = await Promise.all(
+        chatsWithLoading.map(async (c) => {
+          if (c.id !== currentChatId) return c;
+
+          // Generate AI-based title if it's still "New Chat"
+          if (c.title === "New Chat") {
+            const messagesForTitle = [
+              ...c.messages.map((m: Message) => ({
+                role: m.type === "request" ? "user" : "assistant",
+                text: m.text,
+              })),
+              { role: "user", text: newMessage.text },
+              { role: "assistant", text: reply ?? "" },
+            ];
+
+            finalTitle = await generateTitle(messagesForTitle);
+          }
+
+          return {
+            ...c,
+            messages: c.messages.map((m: Message) =>
+              m.id === loadingId ? { ...m, text: reply ?? "" } : m
+            ),
+            title: c.title === "New Chat" ? finalTitle : c.title,
+          };
+        })
       );
-      onUpdateChats(finalChats);
+
+      if (!controller.signal.aborted) {
+        onUpdateChats(finalChats);
+      }
+      
     } catch (err) {
+      if (!controller.signal.aborted) {
+        const errorChats = chatsWithLoading.map((c) =>
+          c.id === currentChatId
+            ? {
+                ...c,
+                messages: c.messages.map((m: any) =>
+                  m.id === loadingId ? { ...m, text: "Error fetching AI response." } : m
+                ),
+              }
+            : c
+        );
+        onUpdateChats(errorChats);
+        console.error(err);
+      }
+    } finally {
+      setIsStreaming(false);
+      setStreamingMessageId(null);
+      setAbortController(null);
+    }
+  };
+
+  const handleEditRequest = async (messageId: number, newText: string) => {
+  if (!currentChatId || isStreaming) return;
+
+  const currentChat = chats.find(c => c.id === currentChatId);
+  if (!currentChat) return;
+
+  // Find the index of the message being edited
+  const messageIndex = currentChat.messages.findIndex(m => m.id === messageId);
+  if (messageIndex === -1) return;
+
+  // Create new message with edited text
+  const editedMessage: Message = {
+    id: messageId,
+    type: "request",
+    text: newText,
+  };
+
+  // Remove all messages after the edited one (including the response)
+  const messagesUpToEdit = currentChat.messages.slice(0, messageIndex);
+  const updatedMessages = [...messagesUpToEdit, editedMessage];
+
+  // Update the chat with only messages up to and including the edited one
+  const updatedChats = chats.map((c) =>
+    c.id === currentChatId
+      ? { ...c, messages: updatedMessages }
+      : c
+  );
+  onUpdateChats(updatedChats);
+
+  // Generate new response for the edited message
+  const loadingId = Date.now();
+  const chatsWithLoading = updatedChats.map((c) =>
+    c.id === currentChatId
+      ? { 
+          ...c, 
+          messages: [
+            ...c.messages, 
+            { id: loadingId, type: "response" as const, text: "" }
+          ] 
+        }
+      : c
+  );
+  onUpdateChats(chatsWithLoading);
+
+  // Set streaming state
+  setIsStreaming(true);
+  setStreamingMessageId(loadingId);
+  
+  // Create abort controller
+  const controller = new AbortController();
+  setAbortController(controller);
+
+  try {
+    // Get the full response
+    const reply = await generateResponse(newText);
+    
+    if (controller.signal.aborted) return;
+
+    // Simulate typing effect
+    const typeMessage = async (fullText: string) => {
+      let currentText = "";
+      
+      for (let i = 0; i < fullText.length; i++) {
+        if (controller.signal.aborted) break;
+        
+        currentText += fullText[i];
+        
+        const typingChats = chatsWithLoading.map((c) =>
+          c.id === currentChatId
+            ? {
+                ...c,
+                messages: c.messages.map((m: Message) =>
+                  m.id === loadingId ? { ...m, text: currentText } : m
+                ),
+              }
+            : c
+        );
+        onUpdateChats(typingChats);
+        
+        await new Promise(resolve => setTimeout(resolve, 1));
+      }
+    };
+
+    await typeMessage(reply || "");
+
+    if (controller.signal.aborted) return;
+
+    // Update with final response
+    const finalChats = chatsWithLoading.map((c) =>
+      c.id === currentChatId
+        ? {
+            ...c,
+            messages: c.messages.map((m: Message) =>
+              m.id === loadingId ? { ...m, text: reply ?? "" } : m
+            ),
+          }
+        : c
+    );
+
+    if (!controller.signal.aborted) {
+      onUpdateChats(finalChats);
+    }
+    
+  } catch (err) {
+    if (!controller.signal.aborted) {
       const errorChats = chatsWithLoading.map((c) =>
         c.id === currentChatId
           ? {
@@ -104,12 +323,19 @@ const ChatView: React.FC<ChatViewProps> = ({
       onUpdateChats(errorChats);
       console.error(err);
     }
-  };
+  } finally {
+    setIsStreaming(false);
+    setStreamingMessageId(null);
+    setAbortController(null);
+  }
+};
 
   const handleKeyDown = (e: any) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      if (!isStreaming) {
+        sendMessage();
+      }
     }
   };
 
@@ -158,12 +384,22 @@ const ChatView: React.FC<ChatViewProps> = ({
             ) : (
               <div className="space-y-4 pb-4">
                 {currentChat.messages.map((msg: Message) =>
-                  msg.type === "request" ? (
-                   <RequestBubble key={msg.id} message={msg.text} />
-                  ) : (
-                     <ResponseBubble key={msg.id} message={msg.text} />
-                  )
-                )}
+  msg.type === "request" ? (
+    <RequestBubble 
+      key={msg.id} 
+      message={msg.text}
+      messageId={msg.id}
+      isStreaming={isStreaming}
+      onEditRequest={handleEditRequest}
+    />
+  ) : (
+    <ResponseBubble 
+      key={msg.id} 
+      message={msg.text} 
+      isStreaming={isStreaming && msg.id === streamingMessageId}
+    />
+  )
+)}
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -182,15 +418,17 @@ const ChatView: React.FC<ChatViewProps> = ({
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="
-                  w-full text-base sm:text-xl bg-transparent text-white 
+                disabled={isStreaming}
+                className={`
+                  w-full text-base sm:text-lg bg-transparent text-white 
                   placeholder:text-white/50 outline-none border-none resize-none 
                   overflow-y-auto custom-scrollbar transition-all duration-150
-                "
-                placeholder="Ask anything..."
+                  ${isStreaming ? 'opacity-50 cursor-not-allowed' : ''}
+                `}
+                placeholder={isStreaming ? "AI is typing..." : "Ask anything..."}
                 rows={2}
                 style={{
-                  fontSize: "20px", // Prevents zoom on iOS
+                  fontSize: "15px", // Prevents zoom on iOS
                   lineHeight: "24px", // Consistent with JS calculation
                   maxHeight: "240px", // 10 rows × 24px
                 }}
@@ -201,28 +439,50 @@ const ChatView: React.FC<ChatViewProps> = ({
             <div className="flex justify-between items-center">
               {/* Left side - Attach button */}
               <div>
-                <button className="bg-white/10 hover:bg-white/20 active:bg-white/30 rounded-lg px-3 py-2 flex gap-2 items-center text-sm text-white transition-colors touch-manipulation min-h-[44px]">
+                <button 
+                  disabled={isStreaming}
+                  className={`bg-white/10 hover:bg-white/20 active:bg-white/30 rounded-lg px-3 py-2 flex gap-2 items-center text-sm text-white transition-colors touch-manipulation min-h-[44px] ${
+                    isStreaming ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
                   <Paperclip size={16} />
                   <span className="hidden sm:inline">Attach Files</span>
                 </button>
               </div>
 
-              {/* Right side - Mic and Send buttons */}
+              {/* Right side - Mic, Stop/Send buttons */}
               <div className="flex gap-2">
-                <button className="p-2.5 bg-white/10 hover:bg-white/20 active:bg-white/30 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center">
-                  <Mic size={18} className="text-white" />
-                </button>
-                <button
-                  onClick={sendMessage}
-                  disabled={!input.trim()}
-                  className={`p-2.5 rounded-lg transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center ${
-                    input.trim() 
-                      ? "bg-green-600 hover:bg-green-700 active:bg-green-800 text-white cursor-pointer" 
-                      : "bg-green-600/30 text-white/50 cursor-not-allowed"
+                <button 
+                  disabled={isStreaming}
+                  className={`p-2.5 bg-white/10 hover:bg-white/20 active:bg-white/30 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center ${
+                    isStreaming ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
-                  <Send size={18} />
+                  <Mic size={18} className="text-white" />
                 </button>
+                
+                {/* Stop/Send Button */}
+                {isStreaming ? (
+                  <button
+                    onClick={stopStreaming}
+                    className="p-2.5 rounded-lg transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center bg-red-600 hover:bg-red-700 active:bg-red-800 text-white cursor-pointer"
+                    title="Stop generating"
+                  >
+                    <Square size={18} fill="currentColor" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={sendMessage}
+                    disabled={!input.trim()}
+                    className={`p-2.5 rounded-lg transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center ${
+                      input.trim() 
+                        ? "bg-green-600 hover:bg-green-700 active:bg-green-800 text-white cursor-pointer" 
+                        : "bg-green-600/30 text-white/50 cursor-not-allowed"
+                    }`}
+                  >
+                    <Send size={18} />
+                  </button>
+                )}
               </div>
             </div>
           </div>
