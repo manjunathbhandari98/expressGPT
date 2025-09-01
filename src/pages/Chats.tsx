@@ -5,7 +5,7 @@ import Sidebar from "../components/sidebar/Sidebar";
 import type { Chat } from "../types/chat";
 import Search from "./Search";
 
-const Chat = () => {
+const ChatPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -140,4 +140,4 @@ const Chat = () => {
   );
 };
 
-export default Chat;
+export default ChatPage;
