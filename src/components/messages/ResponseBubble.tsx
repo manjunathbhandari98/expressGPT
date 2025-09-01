@@ -410,7 +410,7 @@ const ResponseBubble = ({
           <div className="max-w-none text-white prose prose-invert prose-lg">
             {message ? parseMarkdown(message) : null}
           </div>
-          {/* Streaming indicator */}
+          {/* Streaming indicator */} 
           {isStreaming && <Thinking />}
         </div>
         {timestamp && (

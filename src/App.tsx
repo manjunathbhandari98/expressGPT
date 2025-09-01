@@ -1,7 +1,7 @@
 
-import './App.css'
-import UniverseBackground from './components/UniverseBackground'
-import Chat from './pages/Chats'
+import './App.css';
+import UniverseBackground from './components/UniverseBackground';
+import Chat from './pages/Chats';
 
 function App() {
 
@@ -18,6 +18,7 @@ function App() {
 
         <main className="">
           <Chat/>
+          
         </main>
       </div>
     </div>

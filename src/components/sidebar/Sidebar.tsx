@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Chat } from "../../types/chat";
 import ExpressGPTLogo from "../logo/ExpressGPTLogo";
 
@@ -41,6 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const editInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   //Auto-create a new chat if none exist
   useEffect(() => {
@@ -124,6 +126,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     setActiveDropdown(null);
   };
 
+  const onSearch = () =>{
+    navigate('/search');
+  }
+
   return (
     <div
       className={`
@@ -185,6 +191,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </button>
 
             <button
+            onClick={onSearch}
               className={`
                 ${isCollapsed ? "w-12 h-12 justify-center" : "w-full p-3 gap-3"}
                 flex items-center hover:bg-white/20 rounded-xl transition-colors touch-manipulation text-white
