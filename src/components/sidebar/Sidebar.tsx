@@ -178,17 +178,24 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-4">
           {/* Action buttons */}
           <div className="space-y-2 mb-6">
-            <button
-              onClick={onCreateNewChat}
-              className={`
-                ${isCollapsed ? "w-12 h-12 justify-center" : "w-full p-3 gap-3"}
-                flex items-center hover:bg-white/20 rounded-xl transition-colors touch-manipulation text-white
-              `}
-              title="New Chat"
-            >
-              <SquarePen size={20} />
-              {!isCollapsed && <span>New Chat</span>}
-            </button>
+<button
+  onClick={() => {
+    // ✅ Prevent creating multiple "New Chat"
+    const hasNewChat = chats.some((chat) => chat.title === "New Chat");
+    if (!hasNewChat) {
+      onCreateNewChat();
+    }
+  }}
+  className={`
+    ${isCollapsed ? "w-12 h-12 justify-center" : "w-full p-3 gap-3"}
+    flex items-center hover:bg-white/20 rounded-xl transition-colors touch-manipulation text-white
+  `}
+  title="New Chat"
+>
+  <SquarePen size={20} />
+  {!isCollapsed && <span>New Chat</span>}
+</button>
+
 
             <button
             onClick={onSearch}

@@ -40,7 +40,7 @@ const extForLang = (lang: string) => {
   return map[lang.toLowerCase()] || "Code";
 };
 
-// Enhanced markdown parser with better formatting
+// Enhanced markdown parser with better responsive formatting
 const parseMarkdown = (content: string): React.ReactNode[] => {
   const lines = content.split('\n');
   const elements: React.ReactNode[] = [];
@@ -69,38 +69,38 @@ const parseMarkdown = (content: string): React.ReactNode[] => {
       continue;
     }
 
-    // Headings
+    // Headings - responsive sizing
     if (line.startsWith('#')) {
       const level = line.match(/^#+/)?.[0].length || 1;
       const text = line.replace(/^#+\s*/, '');
       
       if (level === 1) {
         elements.push(
-          <h1 key={i} className="text-3xl font-bold mt-6 mb-4 text-white leading-tight">
+          <h1 key={i} className="text-xl sm:text-2xl lg:text-3xl font-bold mt-4 sm:mt-6 mb-3 sm:mb-4 text-white leading-tight">
             {parseInlineMarkdown(text)}
           </h1>
         );
       } else if (level === 2) {
         elements.push(
-          <h2 key={i} className="text-2xl font-semibold mt-5 mb-3 text-white leading-tight">
+          <h2 key={i} className="text-lg sm:text-xl lg:text-2xl font-semibold mt-4 sm:mt-5 mb-2 sm:mb-3 text-white leading-tight">
             {parseInlineMarkdown(text)}
           </h2>
         );
       } else if (level === 3) {
         elements.push(
-          <h3 key={i} className="text-xl font-medium mt-4 mb-3 text-white leading-tight">
+          <h3 key={i} className="text-base sm:text-lg lg:text-xl font-medium mt-3 sm:mt-4 mb-2 sm:mb-3 text-white leading-tight">
             {parseInlineMarkdown(text)}
           </h3>
         );
       } else {
         elements.push(
-          <h4 key={i} className="text-lg font-medium mt-4 mb-2 text-white leading-tight">
+          <h4 key={i} className="text-sm sm:text-base lg:text-lg font-medium mt-3 sm:mt-4 mb-2 text-white leading-tight">
             {parseInlineMarkdown(text)}
           </h4>
         );
       }
     }
-    // Blockquotes
+    // Blockquotes - responsive padding
     else if (line.startsWith('>')) {
       const quoteLines: string[] = [];
       while (i < lines.length && (lines[i].startsWith('>') || lines[i].trim() === '')) {
@@ -110,10 +110,10 @@ const parseMarkdown = (content: string): React.ReactNode[] => {
       i--;
       
       elements.push(
-        <blockquote key={i} className="border-l-4 border-blue-500 pl-4 my-4 italic text-gray-300 bg-gray-800/30 py-3 rounded-r-lg">
-          <div className="space-y-2">
+        <blockquote key={i} className="border-l-2 sm:border-l-4 border-blue-500 pl-3 sm:pl-4 my-3 sm:my-4 italic text-gray-300 bg-gray-800/30 py-2 sm:py-3 rounded-r-lg">
+          <div className="space-y-1 sm:space-y-2">
             {quoteLines.filter(line => line.trim()).map((quoteLine, idx) => (
-              <p key={idx} className="leading-relaxed">
+              <p key={idx} className="leading-relaxed text-sm sm:text-base">
                 {parseInlineMarkdown(quoteLine)}
               </p>
             ))}
@@ -121,7 +121,7 @@ const parseMarkdown = (content: string): React.ReactNode[] => {
         </blockquote>
       );
     }
-    // Unordered lists
+    // Unordered lists - responsive spacing
     else if (line.match(/^[-*+]\s/)) {
       const listItems: string[] = [];
       while (i < lines.length && lines[i].match(/^[-*+]\s/)) {
@@ -131,16 +131,16 @@ const parseMarkdown = (content: string): React.ReactNode[] => {
       i--;
       
       elements.push(
-        <ul key={i} className="list-disc pl-6 mb-4 mt-2 space-y-2 text-gray-200">
+        <ul key={i} className="list-disc pl-4 sm:pl-6 mb-3 sm:mb-4 mt-2 space-y-1 sm:space-y-2 text-gray-200">
           {listItems.map((item, idx) => (
-            <li key={idx} className="leading-relaxed text-base">
+            <li key={idx} className="leading-relaxed text-sm sm:text-base">
               {parseInlineMarkdown(item)}
             </li>
           ))}
         </ul>
       );
     }
-    // Ordered lists
+    // Ordered lists - responsive spacing
     else if (line.match(/^\d+\.\s/)) {
       const listItems: string[] = [];
       while (i < lines.length && lines[i].match(/^\d+\.\s/)) {
@@ -150,16 +150,16 @@ const parseMarkdown = (content: string): React.ReactNode[] => {
       i--;
       
       elements.push(
-        <ol key={i} className="list-decimal pl-6 mb-4 mt-2 space-y-2 text-gray-200">
+        <ol key={i} className="list-decimal pl-4 sm:pl-6 mb-3 sm:mb-4 mt-2 space-y-1 sm:space-y-2 text-gray-200">
           {listItems.map((item, idx) => (
-            <li key={idx} className="leading-relaxed text-base">
+            <li key={idx} className="leading-relaxed text-sm sm:text-base">
               {parseInlineMarkdown(item)}
             </li>
           ))}
         </ol>
       );
     }
-    // Tables
+    // Tables - responsive with horizontal scroll
     else if (line.includes('|') && lines[i + 1]?.includes('|') && lines[i + 1].includes('-')) {
       const tableLines: string[] = [];
       while (i < lines.length && lines[i].includes('|')) {
@@ -175,12 +175,12 @@ const parseMarkdown = (content: string): React.ReactNode[] => {
       );
 
       elements.push(
-        <div key={i} className="overflow-x-auto my-6 border border-gray-700 rounded-lg">
-          <table className="w-full border-collapse text-gray-200">
+        <div key={i} className="overflow-x-auto my-4 sm:my-6 border border-gray-700 rounded-lg">
+          <table className="w-full border-collapse text-gray-200 min-w-full">
             <thead>
               <tr>
                 {headers.map((header, idx) => (
-                  <th key={idx} className="border border-gray-700 bg-gray-800 px-4 py-3 text-left font-semibold">
+                  <th key={idx} className="border border-gray-700 bg-gray-800 px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-xs sm:text-sm lg:text-base whitespace-nowrap">
                     {parseInlineMarkdown(header)}
                   </th>
                 ))}
@@ -190,7 +190,7 @@ const parseMarkdown = (content: string): React.ReactNode[] => {
               {rows.map((row, rowIdx) => (
                 <tr key={rowIdx}>
                   {row.map((cell, cellIdx) => (
-                    <td key={cellIdx} className="border border-gray-700 px-4 py-3">
+                    <td key={cellIdx} className="border border-gray-700 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm lg:text-base">
                       {parseInlineMarkdown(cell)}
                     </td>
                   ))}
@@ -201,15 +201,14 @@ const parseMarkdown = (content: string): React.ReactNode[] => {
         </div>
       );
     }
-    // Empty lines - add spacing
+    // Empty lines - responsive spacing
     else if (line.trim() === '') {
-      // Add a small spacer for empty lines
-      elements.push(<div key={`spacer-${i}`} className="h-2"></div>);
+      elements.push(<div key={`spacer-${i}`} className="h-1 sm:h-2"></div>);
     }
-    // Regular paragraphs - treat each line separately for better formatting
+    // Regular paragraphs - responsive text
     else if (line.trim()) {
       elements.push(
-        <p key={`line-${i}`} className="mb-3 leading-relaxed text-base text-gray-200">
+        <p key={`line-${i}`} className="mb-2 sm:mb-3 leading-relaxed text-sm sm:text-base text-gray-200">
           {parseInlineMarkdown(line.trim())}
         </p>
       );
@@ -292,7 +291,7 @@ const parseInlineMarkdown = (text: string): React.ReactNode => {
     }
   }
   
-  // Inline code (`code`)
+  // Inline code (`code`) - responsive sizing
   for (let i = 0; i < parts.length; i++) {
     if (typeof parts[i] === 'string') {
       const str = parts[i] as string;
@@ -309,7 +308,7 @@ const parseInlineMarkdown = (text: string): React.ReactNode => {
             newParts.push(str.slice(lastIndex, match.index));
           }
           newParts.push(
-            <code key={`code-${match.index}`} className="px-1.5 py-0.5 mx-0.5 rounded bg-gray-800 text-pink-300 font-mono text-sm border border-gray-700 whitespace-nowrap">
+            <code key={`code-${match.index}`} className="px-1 sm:px-1.5 py-0.5 mx-0.5 rounded bg-gray-800 text-pink-300 font-mono text-xs sm:text-sm border border-gray-700 whitespace-nowrap">
               {match[1]}
             </code>
           );
@@ -357,32 +356,38 @@ const CodeBlock = ({ children, language }: { children: string; language: string 
   };
 
   return (
-    <div className="w-full my-6 rounded-lg bg-[#0d1117] border border-gray-700 overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-[#161b22] border-b border-gray-700">
-        <div className="text-xs text-gray-400 uppercase font-semibold">
+    <div className="w-full my-4 sm:my-6 rounded-lg bg-[#0d1117] border border-gray-700 overflow-hidden">
+      {/* Header - responsive padding */}
+      <div className="flex items-center justify-between px-2 sm:px-3 py-2 bg-[#161b22] border-b border-gray-700">
+        <div className="text-xs sm:text-sm text-gray-400 uppercase font-semibold">
           {extForLang(language) || "Code"}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <button
             onClick={() => handleCopy(children.trim())}
-            className="p-1.5 rounded bg-black/40 hover:bg-black/60 text-xs text-white transition-colors duration-200"
+            className="p-1.5 rounded bg-black/40 hover:bg-black/60 text-xs text-white transition-colors duration-200 touch-manipulation"
             title="Copy code"
+            aria-label="Copy code"
           >
-            {copiedCode === children.trim() ? "Copied" : <Copy size={14} />}
+            {copiedCode === children.trim() ? (
+              <span className="text-xs">Copied</span>
+            ) : (
+              <Copy size={12} />
+            )}
           </button>
           <button
             onClick={() => handleDownload(children.trim(), language || "txt")}
-            className="p-1.5 rounded bg-black/40 hover:bg-black/60 text-xs text-white transition-colors duration-200"
+            className="p-1.5 rounded bg-black/40 hover:bg-black/60 text-xs text-white transition-colors duration-200 touch-manipulation"
             title="Download code"
+            aria-label="Download code"
           >
-            <ArrowDownToLine size={14} />
+            <ArrowDownToLine size={12} />
           </button>
         </div>
       </div>
 
-      {/* Code Body with syntax highlight */}
-      <pre className="w-full p-5 overflow-x-auto bg-[#0d1117] text-sm font-mono">
+      {/* Code Body with syntax highlight - responsive padding and text */}
+      <pre className="w-full p-3 sm:p-4 lg:p-5 overflow-x-auto bg-[#0d1117] text-xs sm:text-sm font-mono">
         <code
           className={`hljs language-${language}`}
           dangerouslySetInnerHTML={{ __html: highlighted }}
@@ -398,23 +403,23 @@ const ResponseBubble = ({
   isStreaming = false,
 }: ResponseBubbleProps) => {
   return (
-    <div className="flex items-start gap-3 w-full">
-      {/* Avatar */}
-      <div className="flex-shrink-0 w-8 h-8 mt-1 rounded-full bg-transparent flex items-center justify-center">
-        <ExpressGPTLogo size={24} withText={false} />
+    <div className="flex items-start gap-2 sm:gap-3 w-full">
+      {/* Avatar - responsive sizing */}
+      <div className="flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 mt-1 rounded-full bg-transparent flex items-center justify-center">
+        <ExpressGPTLogo size={16}  withText={false} />
       </div>
       
       <div className="flex-1 min-w-0">
-        {/* Message card */}
-        <div className="rounded-2xl rounded-tl-sm p-5 bg-transparent">
-          <div className="max-w-none text-white prose prose-invert prose-lg">
+        {/* Message card - responsive padding */}
+        <div className="rounded-2xl rounded-tl-sm p-3 sm:p-4 lg:p-5 bg-transparent">
+          <div className="max-w-none text-white prose prose-invert prose-sm sm:prose-base lg:prose-lg">
             {message ? parseMarkdown(message) : null}
           </div>
           {/* Streaming indicator */} 
           {isStreaming && <Thinking />}
         </div>
         {timestamp && (
-          <div className="text-xs text-gray-400 mt-2 ml-2">{timestamp}</div>
+          <div className="text-xs sm:text-sm text-gray-400 mt-1 sm:mt-2 ml-2">{timestamp}</div>
         )}
       </div>
     </div>

@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Menu, Mic, Paperclip, Send, Square } from "lucide-react";
+import { Info, Menu, Mic, Paperclip, Send, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { generateResponse, generateTitle } from "../services/geminiServices";
 import type { Chat } from "../types/chat";
 import type { Message } from "../types/message";
+import ExpressGPTLogo from "./logo/ExpressGPTLogo";
 import RequestBubble from "./messages/RequestBubble";
 import ResponseBubble from "./messages/ResponseBubble";
 
@@ -340,7 +341,7 @@ useEffect(() => {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full  pt-16 sm:pt-0">
       {/* Top Header - Always visible */}
       <div className="flex justify-between items-center p-3 sm:p-4 backdrop-blur-sm border-white/10">
         <div className="flex items-center gap-2">
@@ -359,17 +360,25 @@ useEffect(() => {
             <ChevronDown className="w-4 h-4 text-white" /> */}
           </div>
         </div>
-        
+        <div className="flex items-center sm:items-center gap-2 rounded-lg border border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 dark:border-yellow-600 p-3 text-xs sm:text-sm text-yellow-800 dark:text-yellow-200 max-w-full sm:max-w-lg">
+  <Info className="w-4 h-4 shrink-0 mt-0.5 sm:mt-0" />
+  <p className="leading-snug">
+    Chats and profiles are not stored yet — everything will be lost once you refresh or close the app.
+  </p>
+</div>
+
         {/* Profile Circle - Always visible */}
-        <div className="rounded-full cursor-pointer flex items-center justify-center bg-amber-600 hover:bg-amber-700 transition-colors w-8 h-8 sm:w-9 sm:h-9">
-          <h2 className="font-bold text-sm sm:text-base text-white">M</h2>
+        <div className="rounded-full hidden cursor-pointer sm:flex items-center justify-center bg-transparent transition-colors w-8 h-8 sm:w-9 sm:h-9">
+          {/* <h2 className="font-bold text-sm sm:text-base text-white"></h2> */}
+          <ExpressGPTLogo size={14} withText={false}/>
         </div>
       </div>
 
       {/* Chat Messages Area */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto scrollbar-none">
-          <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4">
+          <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
+
             {!currentChat || currentChat.messages.length === 0 ? (
               <div className="flex items-center justify-center h-full min-h-[50vh]">
                 <div className="text-center px-4">
@@ -436,55 +445,60 @@ useEffect(() => {
             </div>
 
             {/* Action buttons */}
-            <div className="flex justify-between items-center">
-              {/* Left side - Attach button */}
-              <div>
-                <button 
-                  disabled={isStreaming}
-                  className={`bg-white/10 hover:bg-white/20 active:bg-white/30 rounded-lg px-3 py-2 flex gap-2 items-center text-sm text-white transition-colors touch-manipulation min-h-[44px] ${
-                    isStreaming ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  <Paperclip size={16} />
-                  <span className="hidden sm:inline">Attach Files</span>
-                </button>
-              </div>
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-2">
+  {/* Left side - Attach button */}
+  <button 
+    disabled={isStreaming}
+    className={`flex-1 hidden sm:flex-none justify-center bg-white/10 hover:bg-white/20 active:bg-white/30 rounded-lg px-3 py-2 sm:flex gap-2 items-center text-sm text-white transition-colors touch-manipulation min-h-[44px] ${
+      isStreaming ? 'opacity-50 cursor-not-allowed' : ''
+    }`}
+  >
+    <Paperclip size={16} />
+    <span>Attach Files</span>
+  </button>
 
-              {/* Right side - Mic, Stop/Send buttons */}
-              <div className="flex gap-2">
-                <button 
-                  disabled={isStreaming}
-                  className={`p-2.5 bg-white/10 hover:bg-white/20 active:bg-white/30 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center ${
-                    isStreaming ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  <Mic size={18} className="text-white" />
-                </button>
-                
-                {/* Stop/Send Button */}
-                {isStreaming ? (
-                  <button
-                    onClick={stopStreaming}
-                    className="p-2.5 rounded-lg transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center bg-red-600 hover:bg-red-700 active:bg-red-800 text-white cursor-pointer"
-                    title="Stop generating"
-                  >
-                    <Square size={18} fill="currentColor" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={sendMessage}
-                    disabled={!input.trim()}
-                    className={`p-2.5 rounded-lg transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center ${
-                      input.trim() 
-                        ? "bg-green-600 hover:bg-green-700 active:bg-green-800 text-white cursor-pointer" 
-                        : "bg-green-600/30 text-white/50 cursor-not-allowed"
-                    }`}
-                  >
-                    <Send size={18} />
-                  </button>
-                )}
-              </div>
-            </div>
+  {/* Right side - Mic + Send */}
+  <div className="flex gap-2 justify-center sm:justify-end">
+    <button 
+    disabled={isStreaming}
+    className={`flex-1 sm:hidden sm:flex-none justify-center bg-white/10 hover:bg-white/20 active:bg-white/30 rounded-lg px-3 py-2 flex gap-2 items-center text-sm text-white transition-colors touch-manipulation min-h-[44px] ${
+      isStreaming ? 'opacity-50 cursor-not-allowed' : ''
+    }`}
+  >
+    <Paperclip size={16} />
+    <span>Attach File</span>
+  </button>
+    <button 
+      disabled={isStreaming}
+      className={`p-2.5 bg-white/10 hover:bg-white/20 active:bg-white/30 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center ${
+        isStreaming ? 'opacity-50 cursor-not-allowed' : ''
+      }`}
+    >
+      <Mic size={18} className="text-white" />
+    </button>
+
+    {isStreaming ? (
+      <button
+        onClick={stopStreaming}
+        className="p-2.5 rounded-lg transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center bg-red-600 hover:bg-red-700 active:bg-red-800 text-white cursor-pointer"
+      >
+        <Square size={18} fill="currentColor" />
+      </button>
+    ) : (
+      <button
+        onClick={sendMessage}
+        disabled={!input.trim()}
+        className={`p-2.5 rounded-lg transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center ${
+          input.trim() 
+            ? "bg-green-600 hover:bg-green-700 active:bg-green-800 text-white cursor-pointer" 
+            : "bg-green-600/30 text-white/50 cursor-not-allowed"
+        }`}
+      >
+        <Send size={18} />
+      </button>
+    )}
+  </div>
+</div>
           </div>
         </div>
       </div>

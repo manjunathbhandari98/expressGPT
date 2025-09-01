@@ -87,9 +87,9 @@ const RequestBubble = ({ message, messageId, isStreaming, onEditRequest }: Reque
 
   return (
     <div className="flex flex-col">
-      <div className="flex my-4 items-end justify-end w-full">
-        <div className="flex items-end gap-2 max-w-[70%]">
-          <div className="bg-white/10 text-white text-lg p-3 rounded-l-xl rounded-t-xl flex flex-col relative whitespace-pre-wrap break-words min-w-0">
+      <div className="flex my-2 sm:my-4 items-end justify-end w-full">
+        <div className="flex items-end gap-2 max-w-[85%] sm:max-w-[75%] lg:max-w-[70%]">
+          <div className="bg-white/10 text-white text-sm sm:text-base lg:text-lg p-3 sm:p-4 rounded-l-xl rounded-t-xl flex flex-col relative whitespace-pre-wrap break-words min-w-0 shadow-lg backdrop-blur-sm border border-white/20">
             {isEditing ? (
               <div className="w-full">
                 <textarea
@@ -101,7 +101,7 @@ const RequestBubble = ({ message, messageId, isStreaming, onEditRequest }: Reque
                   placeholder="Edit your message..."
                   rows={2}
                   style={{
-                    fontSize: "15px",
+                    fontSize: "16px", // Prevents zoom on iOS
                     lineHeight: "24px",
                     maxHeight: "240px",
                     minHeight: "48px",
@@ -110,27 +110,29 @@ const RequestBubble = ({ message, messageId, isStreaming, onEditRequest }: Reque
                 <div className="flex gap-2 mt-3 justify-end">
                   <button
                     onClick={handleEditCancel}
-                    className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white/70 hover:text-white"
+                    className="p-2 rounded-lg hover:bg-white/20 transition-colors text-white/70 hover:text-white touch-manipulation"
                     title="Cancel edit"
+                    aria-label="Cancel edit"
                   >
-                    <X size={16} />
+                    <X size={14} />
                   </button>
                   <button
                     onClick={handleEditSave}
                     disabled={!editText.trim() || editText.trim() === message}
-                    className={`p-1.5 rounded-lg transition-colors ${
+                    className={`p-2 rounded-lg transition-colors touch-manipulation ${
                       editText.trim() && editText.trim() !== message
                         ? "bg-green-600 hover:bg-green-700 text-white"
                         : "bg-green-600/30 text-white/50 cursor-not-allowed"
                     }`}
                     title="Save changes"
+                    aria-label="Save changes"
                   >
-                    <Send size={16} />
+                    <Send size={14} />
                   </button>
                 </div>
               </div>
             ) : (
-              <span>{message}</span>
+              <span className="leading-relaxed">{message}</span>
             )}
           </div>
         </div>
@@ -138,25 +140,27 @@ const RequestBubble = ({ message, messageId, isStreaming, onEditRequest }: Reque
       
       {!isEditing && (
         <div className="flex justify-end">
-          <div className="flex gap-5">
+          <div className="flex gap-3 sm:gap-4 lg:gap-5">
             <button
               onClick={handleEditStart}
               disabled={isStreaming}
-              className={`flex items-center cursor-pointer rounded-xl transition-colors touch-manipulation ${
+              className={`flex items-center justify-center p-2 rounded-xl transition-colors touch-manipulation min-h-[44px] min-w-[44px] ${
                 isStreaming
                   ? "text-white/30 cursor-not-allowed"
-                  : "text-white hover:text-white/80"
+                  : "text-white/70 hover:text-white hover:bg-white/10"
               }`}
               title={isStreaming ? "Cannot edit while streaming" : "Edit"}
+              aria-label={isStreaming ? "Cannot edit while streaming" : "Edit"}
             >
-              <Pencil size={16} />
+              <Pencil size={14}  />
             </button>
             <button
               onClick={handleCopy}
-              className="flex items-center cursor-pointer rounded-xl transition-colors touch-manipulation text-white hover:text-white/80"
+              className="flex items-center justify-center p-2 rounded-xl transition-colors touch-manipulation text-white/70 hover:text-white hover:bg-white/10 min-h-[44px] min-w-[44px]"
               title="Copy"
+              aria-label="Copy message"
             >
-              {copied ? <Check size={16} /> : <Copy size={16} />}
+              {copied ? <Check size={14}  /> : <Copy size={14}  />}
             </button>
           </div>
         </div>

@@ -84,14 +84,16 @@ const Chat = () => {
   };
 
   return (
-    <div className="h-screen flex">
+    <div className="h-screen flex overflow-hidden">
       {/* Sidebar */}
       <div
         className={`${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 
         fixed md:relative z-50 md:z-0 
-        h-full transition-transform duration-300 ease-in-out`}
+        w-80 sm:w-72 md:w-80 lg:w-64 xl:w-72
+        h-full transition-transform duration-300 ease-in-out
+        md:flex-shrink-0`}
       >
         <Sidebar
           onClose={() => setSidebarOpen(false)}
@@ -107,13 +109,13 @@ const Chat = () => {
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm"
           onClick={closeSidebar}
         />
       )}
 
       {/* Main Chat Area */}
-      <div className="flex-1 h-full">
+      <div className="flex-1 h-full min-w-0 flex flex-col">
         <ChatView
           onToggleSidebar={toggleSidebar}
           currentChatId={currentChatId}
@@ -128,7 +130,10 @@ const Chat = () => {
         <Search
           chats={chats}
           onClose={() => navigate("/")} 
-          onSelect = {(id:string) => selectChat(id) }
+          onSelect={(id: string) => {
+            selectChat(id);
+            navigate("/");
+          }}
         />
       )}
     </div>
