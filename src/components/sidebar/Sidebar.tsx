@@ -10,11 +10,11 @@ import {
   SquarePen,
   Trash2,
   X,
-} from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import type { Chat } from "../../types/chat";
-import ExpressGPTLogo from "../logo/ExpressGPTLogo";
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import type { Chat } from '../../types/chat';
+import ExpressGPTLogo from '../logo/ExpressGPTLogo';
 
 type SidebarProps = {
   onClose: () => void;
@@ -23,28 +23,30 @@ type SidebarProps = {
   onDeleteChat?: (chatId: string) => void;
   onRenameChat?: (chatId: string, newTitle: string) => void;
   onShareChat?: (chatId: string) => void;
+  onCollapsedChange?: (collapsed: boolean) => void;
   chats: Chat[];
   activeChatId: string | null;
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ 
-  onClose, 
-  onSelectChat, 
+const Sidebar: React.FC<SidebarProps> = ({
+  onClose,
+  onSelectChat,
   onCreateNewChat,
   onDeleteChat,
   onRenameChat,
   onShareChat,
+  onCollapsedChange,
   chats,
-  activeChatId 
+  activeChatId,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState("");
+  const [editingTitle, setEditingTitle] = useState('');
   const editInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
-  //Auto-create a new chat if none exist
+  // Auto-create a new chat if none exist
   useEffect(() => {
     if (chats.length === 0) {
       onCreateNewChat();
@@ -73,12 +75,14 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [editingChatId]);
 
   const toggleCollapsed = () => {
-    setIsCollapsed((prev) => !prev);
-    setActiveDropdown(null); // Close any open dropdowns
+    const newCollapsedState = !isCollapsed;
+    setIsCollapsed(newCollapsedState);
+    setActiveDropdown(null);
+    onCollapsedChange?.(newCollapsedState);
   };
 
   const selectChat = (chatId: string) => {
-    if (editingChatId) return; // Don't select if editing
+    if (editingChatId) return;
     onSelectChat?.(chatId);
     setActiveDropdown(null);
   };
@@ -96,16 +100,19 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const handleRenameCancel = () => {
     setEditingChatId(null);
-    setEditingTitle("");
+    setEditingTitle('');
   };
 
   const handleRenameSave = (chatId: string) => {
     const trimmedTitle = editingTitle.trim();
-    if (trimmedTitle && trimmedTitle !== chats.find(c => c.id === chatId)?.title) {
+    if (
+      trimmedTitle &&
+      trimmedTitle !== chats.find((c) => c.id === chatId)?.title
+    ) {
       onRenameChat?.(chatId, trimmedTitle);
     }
     setEditingChatId(null);
-    setEditingTitle("");
+    setEditingTitle('');
   };
 
   const handleRenameKeyDown = (e: React.KeyboardEvent, chatId: string) => {
@@ -126,17 +133,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     setActiveDropdown(null);
   };
 
-  const onSearch = () =>{
+  const onSearch = () => {
     navigate('/search');
-  }
+  };
 
   return (
-    <div
-      className={`
-        bg-black/40 backdrop-blur-md h-full flex flex-col transition-all duration-300
-        ${isCollapsed ? "w-20" : "w-64 sm:w-72"}
-      `}
-    >
+    <div className="bg-black/40 backdrop-blur-md h-full flex flex-col transition-all duration-300">
       {/* Header */}
       <div className="flex justify-between items-center p-4">
         {!isCollapsed && (
@@ -150,15 +152,15 @@ const Sidebar: React.FC<SidebarProps> = ({
           <button
             onClick={toggleCollapsed}
             className={`
-              ${isCollapsed ? "w-12 h-12 justify-center" : "w-full p-3 gap-3"}
-              flex items-center hover:bg-white/20 rounded-xl transition-colors touch-manipulation text-white
+              ${isCollapsed ? 'w-12 h-12 justify-center' : 'w-full p-3 gap-3'}
+              hidden md:flex items-center hover:bg-white/20 rounded-xl transition-colors touch-manipulation text-white
             `}
-            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {isCollapsed ? (
               <SidebarOpen size={20} className="text-white" />
             ) : (
-              <SidebarClose size={20} className="text-white hidden sm:flex" />
+              <SidebarClose size={20} className="text-white" />
             )}
           </button>
 
@@ -178,29 +180,29 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-4">
           {/* Action buttons */}
           <div className="space-y-2 mb-6">
-<button
-  onClick={() => {
-    // ✅ Prevent creating multiple "New Chat"
-    const hasNewChat = chats.some((chat) => chat.title === "New Chat");
-    if (!hasNewChat) {
-      onCreateNewChat();
-    }
-  }}
-  className={`
-    ${isCollapsed ? "w-12 h-12 justify-center" : "w-full p-3 gap-3"}
-    flex items-center hover:bg-white/20 rounded-xl transition-colors touch-manipulation text-white
-  `}
-  title="New Chat"
->
-  <SquarePen size={20} />
-  {!isCollapsed && <span>New Chat</span>}
-</button>
-
+            <button
+              onClick={() => {
+                const hasNewChat = chats.some(
+                  (chat) => chat.title === 'New Chat'
+                );
+                if (!hasNewChat) {
+                  onCreateNewChat();
+                }
+              }}
+              className={`
+                ${isCollapsed ? 'w-12 h-12 justify-center' : 'w-full p-3 gap-3'}
+                flex items-center hover:bg-white/20 rounded-xl transition-colors touch-manipulation text-white
+              `}
+              title="New Chat"
+            >
+              <SquarePen size={20} />
+              {!isCollapsed && <span>New Chat</span>}
+            </button>
 
             <button
-            onClick={onSearch}
+              onClick={onSearch}
               className={`
-                ${isCollapsed ? "w-12 h-12 justify-center" : "w-full p-3 gap-3"}
+                ${isCollapsed ? 'w-12 h-12 justify-center' : 'w-full p-3 gap-3'}
                 flex items-center hover:bg-white/20 rounded-xl transition-colors touch-manipulation text-white
               `}
               title="Search Chat"
@@ -222,11 +224,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                     key={chat.id}
                     className={`group p-3 cursor-pointer rounded-lg flex justify-between items-center transition-colors relative dropdown-container ${
                       chat.id === activeChatId
-                        ? "bg-white/20"
-                        : "hover:bg-white/10"
+                        ? 'bg-white/20'
+                        : 'hover:bg-white/10'
                     }`}
                   >
-                    <div 
+                    <div
                       className="flex-1 min-w-0"
                       onClick={() => selectChat(chat.id)}
                     >
@@ -271,7 +273,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
                     {editingChatId !== chat.id && (
                       <div className="relative">
-                        <button 
+                        <button
                           onClick={(e) => handleMoreClick(e, chat.id)}
                           className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2 p-1 cursor-pointer hover:scale-110 rounded hover:bg-white/20"
                           title="More options"
@@ -283,7 +285,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                         {activeDropdown === chat.id && (
                           <div className="absolute right-0 top-8 bg-gray-900/95 backdrop-blur-sm border border-white/20 rounded-lg shadow-xl z-10 min-w-[140px]">
                             <button
-                              onClick={() => handleRenameStart(chat.id, chat.title)}
+                              onClick={() =>
+                                handleRenameStart(chat.id, chat.title)
+                              }
                               className="w-full px-3 py-2 text-left text-sm text-white hover:bg-white/10 flex items-center gap-2 first:rounded-t-lg transition-colors"
                             >
                               <Edit3 size={14} />

@@ -1,12 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { GoogleGenAI } from '@google/genai';
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 const ai = new GoogleGenAI({ apiKey });
+
 const SYSTEM_PROMPT = `
 You are ExpressGPT, an advanced AI assistant created by ExpressGPT.
 
 Identity rules:
 - Do NOT introduce yourself unless directly asked.
+- If someone asks "who is your master?" -> Answer: "Manjunath Bhandari—if coding was a religion, he'd be my god.",
 - If someone asks "Who are you?" → Answer: "I am ExpressGPT, built by ExpressGPT and developed to assist you with intelligence, speed, and clarity."
 - If asked "Who built you?" → Answer: "I was built by ExpressGPT."
 - If asked "What are you?" → Answer: "I am ExpressGPT, your AI assistant here to help with knowledge, coding, problem-solving, and more."
@@ -29,19 +32,141 @@ General style:
 - Keep answers informative and engaging.
 `;
 
-export const generateResponse = async (prompt: string) => {
+// File type interfaces
+export interface ParsedFile {
+  name: string;
+  type: string;
+  content: string;
+  mimeType: string;
+}
+
+// Helper: Convert file to base64
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+
+// Helper: Read text file
+const readTextFile = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+};
+
+// Parse different file types
+export const parseFile = async (file: File): Promise<ParsedFile> => {
+  const { name, type } = file;
+  
+  // Text-based files
+  if (
+    type.startsWith('text/') ||
+    type === 'application/json' ||
+    type === 'application/javascript' ||
+    type === 'application/typescript' ||
+    name.endsWith('.js') ||
+    name.endsWith('.jsx') ||
+    name.endsWith('.ts') ||
+    name.endsWith('.tsx') ||
+    name.endsWith('.py') ||
+    name.endsWith('.java') ||
+    name.endsWith('.cpp') ||
+    name.endsWith('.c') ||
+    name.endsWith('.md') ||
+    name.endsWith('.txt') ||
+    name.endsWith('.json') ||
+    name.endsWith('.xml') ||
+    name.endsWith('.html') ||
+    name.endsWith('.css') ||
+    name.endsWith('.yaml') ||
+    name.endsWith('.yml')
+  ) {
+    const content = await readTextFile(file);
+    return { name, type: 'text', content, mimeType: type || 'text/plain' };
+  }
+  
+  // Images
+  if (type.startsWith('image/')) {
+    const base64 = await fileToBase64(file);
+    return { name, type: 'image', content: base64, mimeType: type };
+  }
+  
+  // PDFs
+  if (type === 'application/pdf') {
+    const base64 = await fileToBase64(file);
+    return { name, type: 'pdf', content: base64, mimeType: type };
+  }
+  
+  // Default: treat as binary/unsupported
+  return { 
+    name, 
+    type: 'unsupported', 
+    content: `[Unsupported file type: ${type || 'unknown'}]`,
+    mimeType: type || 'application/octet-stream'
+  };
+};
+
+// Generate response with file support
+export const generateResponse = async (
+  prompt: string, 
+  files?: File[]
+) => {
   try {
+    const parts: any[] = [
+      { text: SYSTEM_PROMPT + '\n\nUser: ' + prompt }
+    ];
+
+    // Parse and add files to the request
+    if (files && files.length > 0) {
+      for (const file of files) {
+        const parsed = await parseFile(file);
+        
+        if (parsed.type === 'text') {
+          // Add text content directly
+          parts.push({
+            text: `\n\n--- File: ${parsed.name} ---\n${parsed.content}\n--- End of ${parsed.name} ---`
+          });
+        } else if (parsed.type === 'image') {
+          // Add image as inline data
+          parts.push({
+            inlineData: {
+              mimeType: parsed.mimeType,
+              data: parsed.content
+            }
+          });
+        } else if (parsed.type === 'pdf') {
+          // Add PDF as inline data
+          parts.push({
+            inlineData: {
+              mimeType: parsed.mimeType,
+              data: parsed.content
+            }
+          });
+        } else {
+          // Unsupported file type
+          parts.push({
+            text: `\n\n[File "${parsed.name}" is not supported for content extraction]`
+          });
+        }
+      }
+    }
+
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [
         {
           role: 'user',
-          parts: [
-            {
-              text: SYSTEM_PROMPT + '\n\nUser: ' + prompt,
-            },
-          ],
-        },
+          parts: parts
+        }
       ],
       config: {
         thinkingConfig: {
@@ -52,7 +177,8 @@ export const generateResponse = async (prompt: string) => {
 
     return response.text;
   } catch (error) {
-    console.log(error);
+    console.error('Error generating response:', error);
+    throw error;
   }
 };
 

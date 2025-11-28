@@ -1,22 +1,24 @@
-import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import ChatView from "../components/ChatView";
-import Sidebar from "../components/sidebar/Sidebar";
-import type { Chat } from "../types/chat";
-import Search from "./Search";
+// ChatPage.tsx - Main chat interface with responsive sidebar
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import ChatView from '../components/ChatView';
+import Sidebar from '../components/sidebar/Sidebar';
+import type { Chat } from '../types/chat';
+import Search from './Search';
 
 const ChatPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
 
-  const isSearch = location.pathname === "/search";
+  const isSearch = location.pathname === '/search';
 
   // Load chats from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem("chats");
+    const saved = localStorage.getItem('chats');
     if (saved) {
       try {
         const parsed = JSON.parse(saved) as Chat[];
@@ -31,14 +33,14 @@ const ChatPage = () => {
           setCurrentChatId(lastChat.id);
         }
       } catch (e) {
-        console.error("Failed to restore chats", e);
+        console.error('Failed to restore chats', e);
       }
     }
   }, []);
 
   // Save chats
   useEffect(() => {
-    localStorage.setItem("chats", JSON.stringify(chats));
+    localStorage.setItem('chats', JSON.stringify(chats));
   }, [chats]);
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
@@ -52,7 +54,7 @@ const ChatPage = () => {
   const createNewChat = () => {
     const newChat: Chat = {
       id: Date.now().toString(),
-      title: "New Chat",
+      title: 'New Chat',
       messages: [],
       createdAt: new Date(),
     };
@@ -84,16 +86,17 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden">
-      {/* Sidebar */}
+    <div className="h-dvh flex overflow-hidden">
+      {/* Sidebar - Desktop: fixed width, Mobile: overlay */}
       <div
-        className={`${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 
-        fixed md:relative z-50 md:z-0 
-        w-80 sm:w-72 md:w-80 lg:w-64 xl:w-72
-        h-full transition-transform duration-300 ease-in-out
-        md:flex-shrink-0`}
+        className={`
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          md:translate-x-0 
+          fixed md:relative z-50 md:z-0 
+          h-full transition-all duration-300 ease-in-out
+          ${sidebarCollapsed ? 'md:w-20' : 'md:w-64'}
+          w-80 sm:w-72
+        `}
       >
         <Sidebar
           onClose={() => setSidebarOpen(false)}
@@ -101,6 +104,7 @@ const ChatPage = () => {
           onCreateNewChat={createNewChat}
           onDeleteChat={handleDeleteChat}
           onRenameChat={handleRenameChat}
+          onCollapsedChange={setSidebarCollapsed}
           chats={chats}
           activeChatId={currentChatId}
         />
@@ -114,8 +118,8 @@ const ChatPage = () => {
         />
       )}
 
-      {/* Main Chat Area */}
-      <div className="flex-1 h-full min-w-0 flex flex-col">
+      {/* Main Chat Area - Grows to fill remaining space */}
+      <div className="flex-1 h-full min-w-0 flex flex-col overflow-hidden">
         <ChatView
           onToggleSidebar={toggleSidebar}
           currentChatId={currentChatId}
@@ -129,10 +133,10 @@ const ChatPage = () => {
       {isSearch && (
         <Search
           chats={chats}
-          onClose={() => navigate("/")} 
+          onClose={() => navigate('/')}
           onSelect={(id: string) => {
             selectChat(id);
-            navigate("/");
+            navigate('/');
           }}
         />
       )}
